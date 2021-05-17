@@ -1,0 +1,22 @@
+From 1d9912fd4df261a148293463bb96ae0415ae1a97 Mon Sep 17 00:00:00 2001
+From: Ryota Horii <rhorii@gmail.com>
+Date: Mon, 17 May 2021 06:45:42 +0900
+Subject: [PATCH] Remove unnecessary constant
+
+---
+ vendor/magento/module-sales/Model/Config/Source/Order/Status.php | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/vendor/magento/module-sales/Model/Config/Source/Order/Status.php b/vendor/magento/module-sales/Model/Config/Source/Order/Status.php
+index 80daf4707279..9ee5ed7ee10b 100644
+--- a/vendor/magento/module-sales/Model/Config/Source/Order/Status.php
++++ b/vendor/magento/module-sales/Model/Config/Source/Order/Status.php
+@@ -16,8 +16,6 @@
+  */
+ class Status implements \Magento\Framework\Option\ArrayInterface
+ {
+-    const UNDEFINED_OPTION_LABEL = '-- Please Select --';
+-
+     /**
+      * @var string[]
+      */
