@@ -1,0 +1,155 @@
+From 5cb68bc81d73fb65d0f43b2301344234d2775748 Mon Sep 17 00:00:00 2001
+From: Jimmy <jimmy@mageplaza.com>
+Date: Tue, 16 Mar 2021 09:10:34 +0700
+Subject: [PATCH 1/2] empty datepicker input after clearing grid filters
+
+---
+ .../Ui/view/base/web/js/form/element/date.js  | 20 +++++++++++++++++++
+ 1 file changed, 20 insertions(+)
+
+diff --git a/vendor/magento/module-ui/view/base/web/js/form/element/date.js b/vendor/magento/module-ui/view/base/web/js/form/element/date.js
+index a5447b290fc5..7cb4ec3e3487 100644
+--- a/vendor/magento/module-ui/view/base/web/js/form/element/date.js
++++ b/vendor/magento/module-ui/view/base/web/js/form/element/date.js
+@@ -201,6 +201,26 @@ define([
+                 utils.convertToMomentFormat(this.outputDateFormat);
+ 
+             this.validationParams.dateFormat = this.outputDateFormat;
++        },
++
++        /**
++         * Make sure the datepicker is set to empty
++         */
++        clear: function () {
++            /**
++             * @type {NodeListOf<HTMLInputElement>}
++             */
++            var element = document.getElementsByName(this.inputName);
++
++            this.value('');
++
++            if (!element.length) {
++                return this;
++            }
++
++            element[0].value = '';
++
++            return this;
+         }
+     });
+ });
+
+From 66402920592de6853350a7c97adf8764b1204325 Mon Sep 17 00:00:00 2001
+From: Pavel Bystritsky <engcom-vendorworker-foxtrot@adobe.com>
+Date: Mon, 17 May 2021 16:23:55 +0300
+Subject: [PATCH 2/2] magento/magento2#32456: Admin Grid date range filter not
+ working as expected.
+
+---
+ ...inGridFilterCheckInputFieldActionGroup.xml | 24 +++++++
+ .../AdminGridFilterDatepickerClearedTest.xml  | 65 +++++++++++++++++++
+ 2 files changed, 89 insertions(+)
+ create mode 100644 app/code/Magento/Ui/Test/Mftf/ActionGroup/AdminGridFilterCheckInputFieldActionGroup.xml
+ create mode 100644 app/code/Magento/Ui/Test/Mftf/Test/AdminGridFilterDatepickerClearedTest.xml
+
+diff --git a/vendor/magento/module-ui/Test/Mftf/ActionGroup/AdminGridFilterCheckInputFieldActionGroup.xml b/vendor/magento/module-ui/Test/Mftf/ActionGroup/AdminGridFilterCheckInputFieldActionGroup.xml
+new file mode 100644
+index 000000000000..58afe4556bb1
+--- /dev/null
++++ b/vendor/magento/module-ui/Test/Mftf/ActionGroup/AdminGridFilterCheckInputFieldActionGroup.xml
+@@ -0,0 +1,24 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<!--
++ /**
++  * Copyright © Magento, Inc. All rights reserved.
++  * See COPYING.txt for license details.
++  */
++-->
++
++<actionGroups xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
++              xsi:noNamespaceSchemaLocation="urn:magento:mftf:Test/etc/actionGroupSchema.xsd">
++    <actionGroup name="AdminGridFilterCheckInputFieldActionGroup">
++        <annotations>
++            <description>Expands the 'Filters' section of an Admin Grid page. Check if the provided Filter Value is set for the provided Filter Name.</description>
++        </annotations>
++        <arguments>
++            <argument name="filterInputName" type="string"/>
++            <argument name="filterValue" type="string"/>
++        </arguments>
++
++        <conditionalClick selector="{{AdminDataGridFilterSection.filterExpand}}" dependentSelector="{{AdminDataGridFilterSection.filterForm}}" visible="false" stepKey="openFiltersFormIfNecessary"/>
++        <waitForElementVisible selector="{{AdminDataGridFilterSection.filterForm}}" stepKey="waitForFormVisible"/>
++        <seeInField userInput="{{filterValue}}" selector="{{AdminDataGridFilterSection.inputFieldByNameAttr(filterInputName)}}" stepKey="checkFilterInputFieldValue"/>
++    </actionGroup>
++</actionGroups>
+diff --git a/vendor/magento/module-ui/Test/Mftf/Test/AdminGridFilterDatepickerClearedTest.xml b/vendor/magento/module-ui/Test/Mftf/Test/AdminGridFilterDatepickerClearedTest.xml
+new file mode 100644
+index 000000000000..1b347aeb09a7
+--- /dev/null
++++ b/vendor/magento/module-ui/Test/Mftf/Test/AdminGridFilterDatepickerClearedTest.xml
+@@ -0,0 +1,65 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<!--
++ /**
++  * Copyright © Magento, Inc. All rights reserved.
++  * See COPYING.txt for license details.
++  */
++-->
++<!-- Test XML Example -->
++<tests xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:mftf:Test/etc/testSchema.xsd">
++    <test name="AdminGridFilterDatepickerClearedTest">
++        <annotations>
++            <stories value="Clear Grid Filter"/>
++            <title value="Grid Filter Clear and Verify Date Picker Cleared"/>
++            <description value="Verify Date Picker values are cleared after 'Clear all' action executed."/>
++            <severity value="MAJOR"/>
++            <group value="UI"/>
++        </annotations>
++
++        <before>
++            <actionGroup ref="AdminLoginActionGroup" stepKey="loginAsAdmin"/>
++        </before>
++        <after>
++            <actionGroup ref="AdminLogoutActionGroup" stepKey="logout"/>
++        </after>
++
++        <!-- Navigate to Login as Customer Log page -->
++        <actionGroup ref="AdminOpenLoginAsCustomerLogActionGroup" stepKey="gotoLoginAsCustomerLog"/>
++
++        <!-- Set 'from date' and 'to date' filter fields -->
++        <generateDate date="-1 day" format="m/d/Y" stepKey="yesterdayDate"/>
++        <actionGroup ref="AdminGridFilterFillInputFieldActionGroup" stepKey="addFromFilter">
++            <argument name="filterInputName" value="time[from]"/>
++            <argument name="filterValue" value="{$yesterdayDate}"/>
++        </actionGroup>
++        <generateDate date="now" format="m/d/Y" stepKey="todayDate"/>
++        <actionGroup ref="AdminGridFilterFillInputFieldActionGroup" stepKey="addToFilter">
++            <argument name="filterInputName" value="time[to]"/>
++            <argument name="filterValue" value="{$todayDate}"/>
++        </actionGroup>
++        <actionGroup ref="AdminGridFilterApplyActionGroup" stepKey="applyFilters"/>
++
++        <!-- Check if 'from date' and 'to date' filter fields are filled -->
++        <actionGroup ref="AdminGridFilterCheckInputFieldActionGroup" stepKey="checkFromFilterBeforeClear">
++            <argument name="filterInputName" value="time[from]"/>
++            <argument name="filterValue" value="{$yesterdayDate}"/>
++        </actionGroup>
++        <actionGroup ref="AdminGridFilterCheckInputFieldActionGroup" stepKey="checkToFilterBeforeClear">
++            <argument name="filterInputName" value="time[to]"/>
++            <argument name="filterValue" value="{$todayDate}"/>
++        </actionGroup>
++
++        <!-- Clear all filter values -->
++        <actionGroup ref="AdminGridFilterResetActionGroup" stepKey="clearAllFilters"/>
++
++        <!-- Check if 'from date' and 'to date' fields are cleared -->
++        <actionGroup ref="AdminGridFilterCheckInputFieldActionGroup" stepKey="checkFromFilterAfterClear">
++            <argument name="filterInputName" value="time[from]"/>
++            <argument name="filterValue" value=""/>
++        </actionGroup>
++        <actionGroup ref="AdminGridFilterCheckInputFieldActionGroup" stepKey="checkToFilterAfterClear">
++            <argument name="filterInputName" value="time[to]"/>
++            <argument name="filterValue" value=""/>
++        </actionGroup>
++    </test>
++</tests>
